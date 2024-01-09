@@ -1,0 +1,453 @@
+# a program that takes user's input and change it to the desired formats 
+
+.eqv MAX_INPUT_SIZE 50
+
+.data
+
+menu: .ascii "\n\n(1)       Enter a Binary Number\n\n(2)       Enter a Decimal Number\n\n(3)       Enter a Hexadecimal Number\n\n(4)       Quit\n\n"
+
+choice: .asciiz "Enter your choice -->  "
+
+ChoiceError: .ascii "Error: Invalid input."	
+
+
+newLine: .asciiz "\n"
+
+space: .asciiz "  "
+
+ErrorMessage: .asciiz "Error: Hexadecimal Input too large.  Try again please.\n\n"
+
+Error2Message: .asciiz "Error: Invalid digit at input.  Try again please.\n\n"
+
+LeavingMsg:.asciiz"Thank you for using our program\n"
+
+DecErorrMsg:.asciiz "Error:Decimal input is too large, Try again please.\n\n"
+
+BinaryErorrMsg:.asciiz "Error:Binary input is too large, Try again please.\n\n"
+
+Greeting: .asciiz "\nWelcome to our program! here we convert your input\n\n"
+
+buffer: .space MAX_INPUT_SIZE
+
+UserMsg:.ascii"\nplease choose from our menu\n\n"
+
+
+
+.align 4
+
+options_table: .word read_binary,read_decimal,read_hexadecimal,exit
+
+num: .word 0
+
+.text
+
+
+        li $v0,4
+	la $a0,Greeting
+	syscall
+main:
+	# print menu message to user 
+	li $v0,4
+	la $a0,menu
+	syscall
+
+readMainOption:
+	# read choice from user 
+	li $v0,5
+	syscall
+
+	move $s0,$v0
+	# print new line
+	li $v0,4
+	la $a0,newLine
+	syscall
+	bltz $s0,main_error # choice < 0
+	li $t0,4
+	ble $s0,$t0,main_show # 1<= choice <= 4
+	# here choice > 4
+	
+main_error:
+
+	li $v0,4
+	la $a0,ChoiceError # print error message
+	syscall
+
+	li $v0,4
+	la $a0,UserMsg # print directions for user before jumping back 
+	syscall 
+
+main_read_choice:
+
+	li $v0,4
+	la $a0,choice # print "Enter your choice -->  "
+	syscall
+	j readMainOption
+
+main_show:
+	addi $s0,$s0,-1 # $s0 = choice-1
+	sll $s0,$s0,2 # $s0 = (choice-1)*4
+
+	la $t0,options_table
+	addu $t0,$t0,$s0 # $t0 = &options_table[choice-1]
+	lw $t0,0($t0) # $t0 = options_table[choice-1]
+	jalr $t0
+	bltz $v1,main_read_choice
+	# save readed number 
+	sw $v0,num 
+
+	# print num in binary decimal hexadecimal
+
+	# print binary
+	lw $a0,num
+	jal print_binary
+	# print 2 sapce
+	li $v0,4
+	la $a0,space
+	syscall
+	# print decimal
+	lw $a0,num
+	jal print_decimal
+
+	# print 2 sapce
+
+	li $v0,4
+	la $a0,space
+
+	syscall
+
+	# print hexadecimal
+	lw $a0,num
+	jal printHex
+	j main
+exit:
+	li $v0,4
+	la $a0,LeavingMsg 
+	syscall
+	# exit
+	li $v0,10
+	syscall
+   # print binary to user
+   # .data section
+
+ .data
+print_binary_msg: .asciiz "Binary = "  # String message for printing
+    # .text section
+  .text
+print_binary:
+        # move $t2,$a0 # $t2 = number
+        
+       move $t2, $a0   # Move the input number to $t2 register
+       li $v0, 4        # System call for printing a string
+       la $a0, print_binary_msg  # Load the address of the string message
+       syscall 
+       li $t1, 0        # Initialize $t1 as the counter for the loop
+print_binary_loop:
+
+      andi $a0, $t2, 1    # $a0 = current digit (the least significant bit)
+      # push to stack
+       addiu $sp, $sp, -4  # Adjust the stack pointer to make space for a word
+       sw $a0, 0($sp)      # Store the current digit on the stack
+       srl $t2, $t2, 1     # Shift right to move to the next digit
+       addi $t1, $t1, 1    # Increment the loop counter
+       bnez $t2, print_binary_loop  # Branch to the loop if there are more digits
+       li $v0, 1           # Set the system call code for printing an integer
+       
+print_binary_loop2:
+       # pop from stack
+
+      lw $a0, 0($sp)      # Load the stored digit from the stack
+      addiu $sp, $sp, 4   # Adjust the stack pointer to remove the stored digit
+      syscall             # System call to print the digit
+      addi $t1, $t1, -1   # Decrement the loop counter
+      bnez $t1, print_binary_loop2  # Branch to the loop if there are more digits to print
+      jr $ra              # Jump to the return address
+
+
+    # print decimal to user
+.data
+print_decimal_msg: .asciiz "Decimal = "  # String message for printing
+.text
+print_decimal:
+      move $t2, $a0   # Move the input number to $t2 register
+      li $v0, 4        # System call for printing a string
+      la $a0, print_decimal_msg  # Load the address of the string message
+      syscall 
+      li $t1, 0        # Initialize $t1 as the counter for the loop
+      li $t3, 10       # Set $t3 as the base (10 for decimal)
+
+print_decimal_loop:
+
+      divu $t2, $t3    # Divide $t2 by $t3
+      mflo $t2         # Move the quotient to $t2 (n = n / 10) 
+      mfhi $a0         # Move the remainder to $a0 ($a0 = n % 10)
+
+        # push to stack
+      addiu $sp, $sp, -4  # Adjust the stack pointer to make space for a word
+      sw $a0, 0($sp)      # Store the remainder on the stack
+      addi $t1, $t1, 1    # Increment the loop counter
+      bnez $t2, print_decimal_loop  # Branch to the loop if there are more digits
+      li $v0, 1           # Set the system call code for printing an integer
+
+print_decimal_loop2:
+        # pop from stack
+       lw $a0, 0($sp)      # Load the stored remainder from the stack
+       addiu $sp, $sp, 4   # Adjust the stack pointer to remove the stored remainder
+       syscall             # System call to print the remainder (digit)
+       addi $t1, $t1, -1   # Decrement the loop counter
+       bnez $t1, print_decimal_loop2  # Branch to the loop if there are more digits to print
+       jr $ra              # Jump to the return address
+
+# print hexadecimal to user 
+.data
+print_hexadecimal_msg: .asciiz "Hexadecimal = "
+.text
+printHex:
+      move $t2, $a0  # $t2 = number
+      li $v0, 4
+      la $a0, print_hexadecimal_msg
+      syscall
+      li $t1, 0  # Counter for the loop
+      
+HexLoop0:
+
+    andi $a0, $t2, 0xf  # $a0 = current digit
+    addiu $sp, $sp, -4
+    sw $a0, 0($sp)
+    srl $t2, $t2, 4  # Move to the next digit
+    addi $t1, $t1, 1  # Increment the counter
+    bnez $t2, HexLoop0
+
+    # Check if the first digit is a letter
+    
+    lw $t0, 0($sp)
+    ble $t0, 9, HexLoop1
+    
+    # Print '0'
+    li $v0, 1
+    li $a0, 0
+    syscall
+
+HexLoop1:
+
+    # Pop from stack
+    lw $a0, 0($sp)
+    addiu $sp, $sp, 4
+    ble $a0, 9, HexLoop2
+    # Convert letter
+    addi $a0, $a0, 55  # 'A' - 10 = 65 - 10 = 55
+    li $v0, 11
+    syscall
+    j HexLoop3
+    
+    
+HexLoop2:
+
+    li $v0, 1
+    syscall
+
+HexLoop3:
+
+    addi $t1, $t1, -1
+    bnez $t1, HexLoop1
+    jr $ra
+    
+ 
+    # read binary from user 
+.data
+binaryReadMessage: .asciiz "Enter a binary number (less than 33 digits) -->  "  # Message prompting the user
+.text
+read_binary:
+
+        li $v0, 4                        # System call for printing a string
+        la $a0, binaryReadMessage        # Load the address of the string message
+        syscall
+
+        # read input from user 
+        li $v0, 8                        # System call for reading a string
+        la $a0, buffer                   # Load the address of the buffer for input
+        li $a1, MAX_INPUT_SIZE           # Set the maximum size for input
+        syscall 
+        li $t2, 1                         # Initialize $t2 as the counter 
+        la $a0, buffer                    # Load the address of the buffer for input
+        li $v0, 0                         # Initialize result to 0
+        
+        
+read_binary_loop:
+
+
+       lbu $t0, 0($a0)                   # Load the current character from the buffer
+        beqz $t0, read_binary_loop_done   # Null byte indicates the end of the input
+        beq $t0, 10, read_binary_loop_done # New line also indicates the end of the input
+        blt $t0, '0', BinError            # Check if the character is less than '0'
+        bgt $t0, '1', BinError            # Check if the character is greater than '1'
+
+        # Here, the current character is '0' or '1'
+        
+        # Convert to value
+       addi $t0, $t0, -48                # '0' = 48
+        or $v0, $v0, $t0                  # Insert the binary digit into the result
+        lbu $t0, 1($a0)                   # Load the next character from the buffer
+        beqz $t0, read_binary_loop_done   # Null byte indicates the end of the input
+        beq $t0, 10, read_binary_loop_done # New line also indicates the end of the input
+        beq $t2, 33, BinError             # Check if the input is too big (more than 32 digits)
+        addi $t2, $t2, 1                  # Increment the counter
+        sll $v0, $v0, 1                   # Shift the result left by 1 (multiply by 2)
+        addiu $a0, $a0, 1                 # Move to the next character in the buffer
+
+      j read_binary_loop
+
+read_binary_loop_done:
+
+      # Check for length
+       li $v1, 0                          # Set $v1 to 0 to indicate success
+       jr $ra                             # Jump to the return address
+	
+	
+	
+	# read decimal from user 
+.data
+decimalReadMessage: .asciiz "Enter a decimal number (less than 4294967296d) -->  "
+.text
+read_decimal:
+
+	li $v0,4 # call for print
+	la $a0,decimalReadMessage
+	syscall
+
+	# read input from user 
+	li $v0,8 # sets the system call register $v0 to 8, which indicates the read system call.
+	la $a0,buffer #  loads the address of the buffer into register $a0. This tells the read system call where to store the read input.
+	li $a1,MAX_INPUT_SIZE #  This instruction sets the maximum size of the input to be read.
+	syscall 
+	li $t3,10 # This instruction sets the base value to 10, which is the base for decimal representation.
+	li $v0,0 # This instruction initializes the result variable $v0 to 0. It will store the converted decimal number.
+	la $a0,buffer #This instruction sets the address of the buffer to register $a0. This will be used to access the input characters.
+
+read_decimal_loop:
+	lbu $t0,0($a0) # This instruction loads the current character from the buffer into register $t0.
+	beqz $t0,read_decimal_loop_done # checks if the current character is the null terminator (0). If it is, it means the input has ended, and the loop should terminate.
+	beq $t0,10,read_decimal_loop_done  # This instruction checks if the current character is a newline character (10). If it is, it means the user has entered a new line, and the loop should skip processing it.
+	blt $t0,'0',error2 # validation:  checks if the current character is less than ASCII '0'.
+	bgt $t0,'9',error2 # Validation: checks if the current character is greater than ASCII '9'
+	# here current char at '0'-'9'
+	# convert it to value
+	addi $t0,$t0,-48 # converts the ASCII value of the current character (stored in $t0) to its corresponding digit value. It subtracts 48 from the ASCII value because the ASCII code for '0' is 48.
+	move $t2,$v0 #copies the current value of $v0 to $t2 for comparison to check for overflow
+	addu $v0,$v0,$t0  # adds the current digit value ($t0) to the result variable $v0.
+	bltu $v0,$t2,errorDec # checks for overflow. If the updated result ($v0) is less than the original value ($t2)
+	lbu $t0,1($a0) #  loads the next character from the buffer into register $t0.
+	beqz $t0,read_decimal_loop_done  #  checks if the next character is the null terminator (0). If it is, it means the input has ended, and the loop should terminate.
+	beq $t0,10,read_decimal_loop_done # check if the next character is a new line so we can skip it 
+
+	# update result
+	move $t2,$v0 # This instruction copies the current value of $v0 to $t2 for comparison.
+	multu $v0,$t3 # This instruction multiplies the result ($v0) by the base value ($t3).
+	mflo $v0  # result = result * 10
+	bltu $v0,$t2,errorDec # over flow here 
+	addi $t2,$t2,1 # counter ++
+	addiu $a0,$a0,1 # go to next char 
+	j read_decimal_loop
+read_decimal_loop_done:
+	li $v1,0
+	jr $ra
+errorDec:
+	li $v0,4
+	la $a0,DecErorrMsg
+	syscall 
+	li $v0,0
+	li $v1,-1
+	jr $ra
+	# read hexa from user 
+.data
+hexaMessage: .asciiz "Enter a hexadecimal number (less than 0FFFFFFFFh) -->  "
+.text
+read_hexadecimal:
+	li $v0,4
+	la $a0,hexaMessage
+	syscall
+	# read input from user 
+	li $v0,8
+	la $a0,buffer
+	li $a1,MAX_INPUT_SIZE
+	syscall 
+	li $v0,0 # result = 0
+	la $a0,buffer
+readHexaloop:
+	lbu $t0,0($a0) # $t0 = current char
+	beqz $t0,readHexaloopdone
+	beq $t0,10,readHexaloopdone
+	blt $t0,'0',error2
+	ble $t0,'9',readHexaloop0
+	blt $t0,'A',error2
+	ble $t0,'F',readHexaloopF
+	blt $t0,'a',error2
+	bgt $t0,'f',error2
+	# here 'a':'f'
+	# convert to value 
+
+	addi $t0,$t0,-87 # -'A'+10 = -97 + 10 = -87
+	j readHexaloopU
+
+readHexaloop0:
+	# here '0':'9'
+	# convert to value 
+	addi $t0,$t0,-48 # '0' = 48
+	j readHexaloopU
+readHexaloopF:
+	# here 'A':'F'
+	# convert to value 
+	addi $t0,$t0,-55 # -'a'+10 = -65 + 10 = -55
+readHexaloopU:
+	or $v0,$v0,$t0
+
+	lbu $t0,1($a0) # $t0 = next char 
+
+	beqz $t0,readHexaloopdone
+
+	beq $t0,10,readHexaloopdone
+
+
+	lui $t2,0xf000
+
+	and $t2,$t2,$v0
+
+	sll $v0,$v0,4 # update result
+
+	bnez $t2,error # over flow here 
+
+	addiu $a0,$a0,1 # go to next char 
+
+	j readHexaloop
+
+readHexaloopdone:
+
+
+
+	li $v1,0
+
+	jr $ra
+
+error:
+	    # Error handling for a hexa error
+    li $v0, 4                # System call for printing a string
+    la $a0, ErrorMessage      # Load the address of the error message
+    syscall 
+   li $v0, 0                # Set $v0 to 0 (return code)
+    li $v1, -1               # Set $v1 to -1 to indicate a generic error
+    jr $ra                   # Jump to the return address
+error2:
+    # Error handling for a specific error (Error2)
+    li $v0, 4                # System call for printing a string
+    la $a0, Error2Message    # Load the address of the specific error message
+    syscall 
+    li $v0, 0                # Set $v0 to 0 (return code)
+    li $v1, -2               # Set $v1 to -2 to indicate a specific error (Error2)
+    jr $ra                   # Jump to the return address
+BinError:
+    # Error handling for a binary input error
+  li $v0, 4                # System call for printing a string
+    la $a0, BinaryErorrMsg   # Load the address of the binary error message
+    syscall 
+    li $v0, 0                # Set $v0 to 0 (return code)
+    li $v1, -1               # Set $v1 to -1 to indicate a binary input error
+    jr $ra                   # Jump
