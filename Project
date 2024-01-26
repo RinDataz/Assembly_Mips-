@@ -100,7 +100,7 @@ main_show:
 	# print binary
 	lw $a0,num
 	jal print_binary
-	# print 2 sapce
+	# print 2 space
 	li $v0,4
 	la $a0,space
 	syscall
@@ -108,7 +108,7 @@ main_show:
 	lw $a0,num
 	jal print_decimal
 
-	# print 2 sapce
+	# print 2 space
 
 	li $v0,4
 	la $a0,space
@@ -144,7 +144,7 @@ print_binary:
 print_binary_loop:
 
       andi $a0, $t2, 1    # $a0 = current digit (the least significant bit)
-      # push to stack
+      # push tostack
        addiu $sp, $sp, -4  # Adjust the stack pointer to make space for a word
        sw $a0, 0($sp)      # Store the current digit on the stack
        srl $t2, $t2, 1     # Shift right to move to the next digit
@@ -168,25 +168,13 @@ print_binary_loop2:
 print_decimal_msg: .asciiz "Decimal = "  # String message for printing
 .text
 print_decimal:
-      move $t2, $a0   # Move the input number to $t2 register
-      li $v0, 4        # System call for printing a string
-      la $a0, print_decimal_msg  # Load the address of the string message
-      syscall 
-      li $t1, 0        # Initialize $t1 as the counter for the loop
-      li $t3, 10       # Set $t3 as the base (10 for decimal)
+     # move $a0, $t2 # $a0 = number
+     move $a0, $t2  # Move the input number to $a0 register
+     li $v0, 1       # System call for printing an integer
+     la $a0, print_decimal_msg  # Load the address of the string message
+     syscall         # Print the message
+     jr $ra          # Jump to the return address
 
-print_decimal_loop:
-
-      divu $t2, $t3    # Divide $t2 by $t3
-      mflo $t2         # Move the quotient to $t2 (n = n / 10) 
-      mfhi $a0         # Move the remainder to $a0 ($a0 = n % 10)
-
-        # push to stack
-      addiu $sp, $sp, -4  # Adjust the stack pointer to make space for a word
-      sw $a0, 0($sp)      # Store the remainder on the stack
-      addi $t1, $t1, 1    # Increment the loop counter
-      bnez $t2, print_decimal_loop  # Branch to the loop if there are more digits
-      li $v0, 1           # Set the system call code for printing an integer
 
 print_decimal_loop2:
         # pop from stack
@@ -202,11 +190,12 @@ print_decimal_loop2:
 print_hexadecimal_msg: .asciiz "Hexadecimal = "
 .text
 printHex:
-      move $t2, $a0  # $t2 = number
-      li $v0, 4
-      la $a0, print_hexadecimal_msg
-      syscall
-      li $t1, 0  # Counter for the loop
+    # move $t2,$a0 # $t2 = number
+    move $t2, $a0   # Move the input number to $t2 register
+    li $v0, 34      # System call for printing a hexadecimal
+    move $a0, $t2   # Pass the number to $a0 register
+    syscall         # Print the hexadecimal value
+    jr $ra          # Jump to the return address
       
 HexLoop0:
 
